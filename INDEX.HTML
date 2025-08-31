@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Location-based AR with Image</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+  <!-- AR.js -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <!-- Look-at -->
+  <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #ui {
+      position: fixed; top:0; left:0; right:0; z-index:2;
+      background: rgba(0,0,0,.45); color:#fff; font-family:sans-serif;
+      padding:8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">📍 Waiting for GPS…</div>
+
+  <a-scene
+    vr-mode-ui="enabled: false"
+    renderer="antialias: true; precision: mediump;"
+    embedded
+    arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;"
+  >
+    <a-camera gps-camera rotation-reader></a-camera>
+  </a-scene>
+
+  <script>
+    const ui = document.getElementById("ui");
+
+    // 🎯 Your target location + image
+    const TARGET = {
+      name: "My Location",
+      lat: 8.634762952452858,
+      lon: 126.09463667599752,
+      img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/320px-Placeholder_view_vector.svg.png"
+      // replace with your own image URL if you want
+    };
+
+    let shown = false;
+
+    // Haversine distance in meters
+    function distanceMeters(lat1, lon1, lat2, lon2) {
+      const toRad = d => d * Math.PI / 180;
+      const R = 6371e3;
+      const φ1 = toRad(lat1), φ2 = toRad(lat2);
+      const Δφ = toRad(lat2 - lat1);
+      const Δλ = toRad(lon2 - lon1);
+      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    const cam = document.querySelector("[gps-camera]");
+    cam.addEventListener("gps-camera-update-position", e => {
+      const { latitude, longitude, accuracy } = e.detail.position;
+      const dist = distanceMeters(latitude, longitude, TARGET.lat, TARGET.lon);
+
+      ui.textContent = `You: ${latitude.toFixed(5)}, ${longitude.toFixed(5)} (±${Math.round(accuracy)} m) — ${Math.round(dist)} m from target`;
+
+      if (!shown && dist < 30) { // within 30 meters
+        shown = true;
+        const scene = document.querySelector("a-scene");
+
+        const entity = document.createElement("a-entity");
+        entity.setAttribute("gps-entity-place", `latitude: ${TARGET.lat}; longitude: ${TARGET.lon}`);
+        entity.setAttribute("look-at", "[gps-camera]");
+
+        const img = document.createElement("a-image");
+        img.setAttribute("src", TARGET.img);
+        img.setAttribute("position", "0 2 0");
+        img.setAttribute("scale", "5 5 5");
+
+        const label = document.createElement("a-text");
+        label.setAttribute("value", TARGET.name);
+        label.setAttribute("align", "center");
+        label.setAttribute("position", "0 4 0");
+        label.setAttribute("scale", "10 10 10");
+
+        entity.appendChild(img);
+        entity.appendChild(label);
+        scene.appendChild(entity);
+
+        ui.textContent += " ✅ Target reached! Showing image.";
+      }
+    });
+  </script>
+</body>
+</html>
