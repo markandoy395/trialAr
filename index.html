@@ -1,62 +1,65 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-ar@3.4.7/dist/aframe-ar.min.js"></script>
-  </head>
-  <body style="margin: 0; overflow: hidden;">
-    <a-scene
-      vr-mode-ui="enabled: false"
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false;"
-    >
-      <a-camera gps-camera rotation-reader></a-camera>
-    </a-scene>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Based Image</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #status {
+      margin: 20px;
+      font-size: 18px;
+      color: #444;
+    }
+    #placeImage {
+      display: none;
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Location Check Demo</h2>
+  <p id="status">Waiting for your location...</p>
+  <img id="placeImage" src="https://cdn-icons-png.flaticon.com/512/854/854878.png" alt="Target Place">
 
-    <script>
-      const targetLat = 8.634762952452858;
-      const targetLng = 126.09463667599752;
-      const tolerance = 0.0005; // ~50m radius
+  <script>
+    const targetLat = 8.634762952452858;
+    const targetLng = 126.09463667599752;
+    const tolerance = 0.0005; // ~50 meters
 
-      function addPlace(lat, lng) {
-        const scene = document.querySelector('a-scene');
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(success, error, {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 10000
+      });
+    } else {
+      document.getElementById("status").textContent = "Geolocation not supported.";
+    }
 
-        const image = document.createElement('a-image');
-        image.setAttribute('src', 'https://cdn-icons-png.flaticon.com/512/854/854878.png');
-        image.setAttribute('look-at', '[gps-camera]'); 
-        image.setAttribute('scale', '20 20 20');
-        image.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}`);
-        scene.appendChild(image);
-      }
+    function success(pos) {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
 
-      // Get device location
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(success, error, {
-          enableHighAccuracy: true,
-          maximumAge: 10000,
-          timeout: 10000
-        });
+      document.getElementById("status").textContent =
+        `Your location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+      if (Math.abs(lat - targetLat) < tolerance &&
+          Math.abs(lng - targetLng) < tolerance) {
+        document.getElementById("placeImage").style.display = "block";
+        document.getElementById("status").textContent += " ✅ You are at the location!";
       } else {
-        alert("Geolocation not supported.");
+        document.getElementById("placeImage").style.display = "none";
       }
+    }
 
-      function success(pos) {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
-        console.log("Your location:", lat, lng);
-
-        if (Math.abs(lat - targetLat) < tolerance &&
-            Math.abs(lng - targetLng) < tolerance) {
-          // Add AR marker only when near location
-          addPlace(targetLat, targetLng);
-        }
-      }
-
-      function error(err) {
-        console.warn("ERROR(" + err.code + "): " + err.message);
-      }
-    </script>
-  </body>
+    function error(err) {
+      document.getElementById("status").textContent =
+        "Error: " + err.message;
+    }
+  </script>
+</body>
 </html>
