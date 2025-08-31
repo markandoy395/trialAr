@@ -1,65 +1,398 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Location Based Image</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    #status {
-      margin: 20px;
-      font-size: 18px;
-      color: #444;
-    }
-    #placeImage {
-      display: none;
-      width: 200px;
-    }
-  </style>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Location AR Experience</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- AR.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.0/aframe.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ar.js/2.2.2/aframe-ar.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        #info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 999;
+            max-width: 300px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        #locationStatus {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 100, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 999;
+            font-size: 12px;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #debugInfo {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(50, 50, 50, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 999;
+            max-width: 350px;
+            font-size: 11px;
+            font-family: monospace;
+        }
+        
+        .ar-object {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+    </style>
 </head>
 <body>
-  <h2>Location Check Demo</h2>
-  <p id="status">Waiting for your location...</p>
-  <img id="placeImage" src="https://cdn-icons-png.flaticon.com/512/854/854878.png" alt="Target Place">
+    <div id="loading">
+        <div class="loading-spinner"></div>
+        <div>Initializing AR Experience...</div>
+        <div style="font-size: 10px; margin-top: 10px;">Please allow location access</div>
+    </div>
+    
+    <div id="info">
+        <strong>AR Location Experience</strong><br>
+        Target: Concepcion, Central Luzon<br>
+        Lat: 8.6348° N<br>
+        Lng: 126.0946° E<br><br>
+        <em>Move around to see AR objects!</em>
+    </div>
+    
+    <div id="locationStatus">GPS: Searching...</div>
+    
+    <div id="debugInfo" style="display: none;">
+        <div id="coordsDisplay"></div>
+        <div id="distanceDisplay"></div>
+        <div id="accuracyDisplay"></div>
+    </div>
+    
+    <a-scene
+        vr-mode-ui="enabled: false"
+        arjs="sourceType: webcam; 
+              videoTexture: true; 
+              debugUIEnabled: false;
+              trackingMethod: best;"
+        renderer="logarithmicDepthBuffer: true;"
+        embedded
+        gesture-detector>
+        
+        <!-- Assets -->
+        <a-assets>
+            <a-mixin id="animation__click" 
+                     animation__click="property: scale; 
+                                      startEvents: click; 
+                                      from: 1 1 1; 
+                                      to: 1.2 1.2 1.2; 
+                                      dur: 300;
+                                      easing: easeInOutQuad;
+                                      dir: alternate;"></a-mixin>
+        </a-assets>
+        
+        <!-- Target Location Objects -->
+        <!-- Main landmark at your exact coordinates -->
+        <a-box 
+            gps-projected-entity-place="latitude: 8.634762952452858; longitude: 126.09463667599752;"
+            material="color: #ff0000; metalness: 0.5; roughness: 0.2;"
+            scale="5 5 5"
+            position="0 10 0"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000;"
+            class="ar-object pulse"
+            mixin="animation__click">
+            <a-text 
+                value="You Are Here!" 
+                position="0 8 0" 
+                align="center"
+                color="white"
+                scale="3 3 3">
+            </a-text>
+        </a-box>
+        
+        <!-- Nearby points of interest (simulated) -->
+        <a-sphere
+            gps-projected-entity-place="latitude: 8.635; longitude: 126.095;"
+            material="color: #00ff00; transparent: true; opacity: 0.8;"
+            scale="3 3 3"
+            position="0 5 0"
+            animation="property: position; to: 0 8 0; dir: alternate; loop: true; dur: 2000;"
+            class="ar-object">
+            <a-text 
+                value="Point North" 
+                position="0 4 0" 
+                align="center"
+                color="green"
+                scale="2 2 2">
+            </a-text>
+        </a-sphere>
+        
+        <a-cylinder
+            gps-projected-entity-place="latitude: 8.634; longitude: 126.094;"
+            material="color: #0000ff; metalness: 0.3;"
+            scale="2 4 2"
+            position="0 2 0"
+            animation="property: scale; to: 2.5 4.5 2.5; dir: alternate; loop: true; dur: 3000;"
+            class="ar-object">
+            <a-text 
+                value="Point South" 
+                position="0 3 0" 
+                align="center"
+                color="blue"
+                scale="1.5 1.5 1.5">
+            </a-text>
+        </a-cylinder>
+        
+        <a-octahedron
+            gps-projected-entity-place="latitude: 8.635; longitude: 126.094;"
+            material="color: #ffff00; wireframe: true;"
+            scale="4 4 4"
+            position="0 7 0"
+            animation="property: rotation; to: 360 0 360; loop: true; dur: 8000;"
+            class="ar-object">
+            <a-text 
+                value="Northwest" 
+                position="0 5 0" 
+                align="center"
+                color="yellow"
+                scale="2 2 2">
+            </a-text>
+        </a-octahedron>
+        
+        <!-- Information panel -->
+        <a-plane
+            gps-projected-entity-place="latitude: 8.634762952452858; longitude: 126.09463667599752;"
+            material="color: #333; transparent: true; opacity: 0.9;"
+            scale="8 4 1"
+            position="0 15 0"
+            rotation="-10 0 0">
+            <a-text 
+                value="AR Location Experience\nConcepcion, Central Luzon\nPhilippines" 
+                position="0 0 0.1" 
+                align="center"
+                color="white"
+                scale="1.5 1.5 1.5"
+                wrap-count="25">
+            </a-text>
+        </a-plane>
+        
+        <!-- Ground reference -->
+        <a-ring
+            gps-projected-entity-place="latitude: 8.634762952452858; longitude: 126.09463667599752;"
+            material="color: #fff; transparent: true; opacity: 0.3;"
+            scale="15 15 1"
+            position="0 0.1 0"
+            rotation="-90 0 0"
+            animation="property: scale; to: 20 20 1; dir: alternate; loop: true; dur: 4000;">
+        </a-ring>
+        
+        <!-- Camera -->
+        <a-camera 
+            id="camera"
+            gps-projected-camera 
+            rotation-reader
+            look-controls="enabled: false"
+            wasd-controls="enabled: false"
+            arjs-device-orientation-controls>
+        </a-camera>
+    </a-scene>
 
-  <script>
-    const targetLat = 8.634762952452858;
-    const targetLng = 126.09463667599752;
-    const tolerance = 0.0005; // ~50 meters
+    <script>
+        let watchId;
+        let targetLat = 8.634762952452858;
+        let targetLng = 126.09463667599752;
+        let currentPosition = null;
+        
+        // Debug toggle
+        let debugMode = false;
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'd' || e.key === 'D') {
+                debugMode = !debugMode;
+                document.getElementById('debugInfo').style.display = debugMode ? 'block' : 'none';
+            }
+        });
+        
+        // Calculate distance between two coordinates
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth's radius in meters
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
 
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(success, error, {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 10000
-      });
-    } else {
-      document.getElementById("status").textContent = "Geolocation not supported.";
-    }
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-    function success(pos) {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-
-      document.getElementById("status").textContent =
-        `Your location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-
-      if (Math.abs(lat - targetLat) < tolerance &&
-          Math.abs(lng - targetLng) < tolerance) {
-        document.getElementById("placeImage").style.display = "block";
-        document.getElementById("status").textContent += " ✅ You are at the location!";
-      } else {
-        document.getElementById("placeImage").style.display = "none";
-      }
-    }
-
-    function error(err) {
-      document.getElementById("status").textContent =
-        "Error: " + err.message;
-    }
-  </script>
+            return R * c; // Distance in meters
+        }
+        
+        // Update location status
+        function updateLocationStatus(position) {
+            currentPosition = position;
+            const distance = calculateDistance(
+                position.coords.latitude, 
+                position.coords.longitude,
+                targetLat,
+                targetLng
+            );
+            
+            const statusEl = document.getElementById('locationStatus');
+            const accuracy = position.coords.accuracy;
+            
+            if (distance < 100) {
+                statusEl.innerHTML = `GPS: ✓ Very Close! (${Math.round(distance)}m)`;
+                statusEl.style.background = 'rgba(0, 200, 0, 0.8)';
+            } else if (distance < 1000) {
+                statusEl.innerHTML = `GPS: ✓ Nearby (${Math.round(distance)}m)`;
+                statusEl.style.background = 'rgba(200, 200, 0, 0.8)';
+            } else {
+                statusEl.innerHTML = `GPS: ✓ Found (${(distance/1000).toFixed(1)}km away)`;
+                statusEl.style.background = 'rgba(200, 100, 0, 0.8)';
+            }
+            
+            // Update debug info
+            if (debugMode) {
+                document.getElementById('coordsDisplay').innerHTML = 
+                    `Current: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+                document.getElementById('distanceDisplay').innerHTML = 
+                    `Distance: ${Math.round(distance)}m`;
+                document.getElementById('accuracyDisplay').innerHTML = 
+                    `Accuracy: ±${Math.round(accuracy)}m`;
+            }
+        }
+        
+        function handleLocationError(error) {
+            const statusEl = document.getElementById('locationStatus');
+            statusEl.innerHTML = 'GPS: ✗ Error';
+            statusEl.style.background = 'rgba(200, 0, 0, 0.8)';
+            
+            console.error('Location error:', error);
+            
+            // Hide loading after error
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 2000);
+        }
+        
+        // Initialize AR experience
+        function initAR() {
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 3000);
+            
+            // Request location access
+            if (navigator.geolocation) {
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                };
+                
+                watchId = navigator.geolocation.watchPosition(
+                    updateLocationStatus, 
+                    handleLocationError, 
+                    options
+                );
+            } else {
+                handleLocationError({message: 'Geolocation not supported'});
+            }
+        }
+        
+        // Start when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initAR();
+        });
+        
+        // Handle AR.js events
+        window.addEventListener('arjs-nft-init-data', function() {
+            console.log('AR.js initialized');
+        });
+        
+        // Click interactions
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('ar-object')) {
+                console.log('AR object clicked!');
+            }
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+        });
+        
+        // Instructions for mobile
+        let instructionShown = false;
+        setTimeout(() => {
+            if (!instructionShown && /Mobi|Android/i.test(navigator.userAgent)) {
+                alert('For best AR experience:\n• Allow camera and location access\n• Hold phone upright\n• Move slowly to see AR objects\n• Press "D" key to toggle debug info');
+                instructionShown = true;
+            }
+        }, 5000);
+    </script>
 </body>
 </html>
